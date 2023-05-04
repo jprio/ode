@@ -9,15 +9,15 @@ const OUT_FILE_NAME: &'static str = "outputs/sample.png";
 
 /*
 Exemple : https://srenevey.github.io/ode-solvers/examples/kepler_orbit.html
-d2x/dt2 = -w^2x 
+d2x/dt2 + 2bdx/dt + w^2x = 0 
 avec 
 * x(0)=1
 * dx(0)/dt=1
  */
 fn main() {
-    let system = HarmonicOscillator { w: 2.0 };
+    let system = HarmonicOscillator { w: 2.0, b: 0.3 };
 
-    let y0 = State::new(1.0, 0.0);
+    let y0 = State::new(1.0, 1.0);
 
     let mut stepper = Dopri5::new(system, 0.0, 50.0, 0.1, y0, 1.0e-10, 1.0e-10);
     let res = stepper.integrate();
@@ -28,7 +28,7 @@ fn main() {
             println!("{}", stats);
 
             // Do something with the output...
-            let path = Path::new("./outputs/harmonic_oscillator.dat");
+            let path = Path::new("./outputs/harmonic_oscillator_friction.dat");
             save(stepper.x_out(), stepper.y_out(), path);
             println!("Results saved in: {:?}", path);
         }
@@ -41,14 +41,16 @@ type State = Vector2<f64>; // la position et la vitesse, sur un seul axe
 type Time = f64;
 struct HarmonicOscillator {
     w: f64,
+    b: f64,
 }
 impl ode_solvers::System<State> for HarmonicOscillator {
     // Equations of motion of the system
     fn system(&self, _t: Time, y: &State, dy: &mut State) {
         /*
+        d2x/dt2 + 2bdx/dt + w^2x = 0 
          */
         dy[0] = y[1];
-        dy[1] = -self.w * y[0];
+        dy[1] = -self.w.powi(2) * y[0] - self.b * dy[0];
     }
 }
 
@@ -102,6 +104,6 @@ fn draw_chart(times: &Vec<Time>, states: &Vec<State>) -> Result<(), Box<dyn std:
         .y_label("The response of something");
 
     // A page with a single view is then saved to an SVG file
-    Page::single(&v).save("harmonic_oscillator.svg").unwrap();
+    Page::single(&v).save("harmonic_oscillator_friction.svg").unwrap();
     Ok(())
 }
